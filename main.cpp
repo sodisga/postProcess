@@ -1,37 +1,163 @@
-#include "postProcess.h"
+#include "postProcess3.h"
 #include <iostream>
-#include <time.h>
-#include <windows.h>
+#include <fstream>
 
-using namespace std;
+#define TESTALL
+//#define TESTONE
 
+#ifdef TESTALL
 int main()
 {
-	string tableName = "2015allTVChannels.txt";
-	//wstring src(L"ÎÒ Òª ¿´C´ÌÀ²CTAV5");
-	wstring src(L"ÎÒ Òª ¿´ÌåÓıÆ½µÀ");
+	locale lc("zh_CN.UTF-8");
+	locale::global(lc);
+	//wcout.imbue(locale("zh_CN.UTF-8"));
 
-	//wstring dst1(L"gl,ÊĞÈËÃñ¹ã²¥µçÌ¨ÂÃÓÎÒôÀÖ¹ã²¥");
-	//string dst2("gl,ÊĞÈËÃñ¹ã²¥µçÌ¨ÂÃÓÎÒôÀÖ¹ã²¥");
+	struct timeval start;
+	gettimeofday( &start, NULL );
 
-	//int n1 = dst1.find(',');
-	//int n2 = dst2.find(',');
+	string channelListName = "channelList20161118.txt";
+	//string channelListName = "testChannel";
+	string ditcName = "chinese2syl_sphnix_utf8_addletter.dict";
 
-	//wstring output(L"UNMATCHED!");
+	CPostProcess2 postProcess(channelListName, ditcName);
 
-	time_t t1 = clock();
-	time_t winT1 = GetTickCount();
-	wstring output = (L"NULL");
-	output = kySearch(src, tableName);
-	time_t winT2 = GetTickCount();
-	time_t t2 = clock();
-	
-	wcout.imbue(locale("chs"));
-	wcout << output << endl;
-	cout << "time cost(ms): " << t2-t1 << endl;
-	cout << "windows time cost(ms): " << winT2 - winT1 << endl;
+	if(-1 == postProcess.initial())
+	{
+		wcerr << "Initialize failed" << endl;
+		return -1;
+	}
 
-	system("pause");
+	struct timeval initial;
+	gettimeofday( &initial, NULL );
+	unsigned long timer = 1000000 * (initial.tv_sec-start.tv_sec)+ initial.tv_usec-start.tv_usec;
+	wcout << L"initial time(ms): " << timer / 1000.0 << endl;
+
+	wifstream testCases;
+	testCases.open("testCases", ios::in);
+	if (!testCases)
+	{
+		cerr << "Unable to open the test file" << endl;
+		return -1;
+	}
+
+	wstring fuzzyChar[] = {L"s,sh",L"z,zh",L"c,ch",L"l,n",L"f,h",L"l,r",L"an,ang",L"en,eng",L"in,ing",L"ian,iang",L"uan,uang",L"q,j"};
+	int fuzzyNum = 12;
+	vector<wstring> output; //æœ€ç»ˆç»“æœ
+	vector<float> similarity; //ç›¸ä¼¼åº¦
+	int num=3; //è¾“å‡ºç»“æœçš„æ•°é‡
+	wchar_t srcTemp[BUFFERSIZE];
+	wstring src;
+	wofstream outStream;
+	outStream.open("testResult3", ios::out);
+	while (!testCases.eof())
+	{
+		testCases.getline(srcTemp, BUFFERSIZE);
+		src = srcTemp;
+
+		if(-1 == postProcess.adjustedByPinYin(src, fuzzyChar, fuzzyNum))
+		{
+			outStream<<src<<L":   "<<endl;
+			continue;
+		}
+
+
+		// è¾“å‡ºæœ€ç»ˆç»“æœ
+		postProcess.getFinalResult(output, similarity, num);
+
+		outStream<<src<<L":   ";
+		for(int i=0; i<num; i++)
+		{
+			outStream<<output[i]<<" ";
+		}
+		outStream<<endl;
+	}
+	outStream.close();
+	testCases.close();
+
+	struct timeval end;
+	gettimeofday( &end, NULL );
+
+	timer = 1000000 * (end.tv_sec-start.tv_sec)+ end.tv_usec-start.tv_usec;
+	wcout << L"time cost totaly(ms): " << timer / 1000.0 << endl;
 
 	return 0;
 }
+#endif
+
+#ifdef TESTONE
+int main()
+{
+	locale lc("zh_CN.UTF-8");
+	locale::global(lc);
+	//wcout.imbue(locale("zh_CN.UTF-8"));
+
+	struct timeval start;
+	gettimeofday( &start, NULL );
+
+	string channelListName = "channelList20161118.txt";
+	//string channelListName = "testChannel";
+	string ditcName = "chinese2syl_sphnix_utf8_addletter.dict";
+	//wstring src(L"ä¸­å¤®ç”µè§†å°å•¼ä¸é¢‘é“");
+	//wstring src(L"æˆ‘ è¦çœ‹ é‡åº†hoå›é¾™è§‚ç”µè§†å°å›½é™…é¢‘é“");
+	wstring src(L"cctv5");
+	//wstring src(L"æˆ‘ è¦ çœ‹cctvk5");
+	//wstring src(L"æˆ‘ è¦ çœ‹ä½“è‚²å¹³é“");
+
+	wcout << src << endl;
+
+//	wstring wordTableVec[LISTNUM];
+//	int listNum = 0;
+//	readWordTable(tableName, wordTableVec, listNum);
+//	output = kyMatchByOne(src6, wordTableVec, listNum);
+
+	CPostProcess2 postProcess(channelListName, ditcName);
+
+	if(-1 == postProcess.initial())
+	{
+		wcerr << "Initialize failed" << endl;
+		return -1;
+	}
+
+	struct timeval initial;
+	gettimeofday( &initial, NULL );
+	unsigned long timer = 1000000 * (initial.tv_sec-start.tv_sec)+ initial.tv_usec-start.tv_usec;
+	wcout << L"initial time(ms): " << timer / 1000.0 << endl;
+
+	//wstring fuzzyChar[] = {L"f,h"};
+	wstring fuzzyChar[] = {L"s,sh",L"z,zh",L"c,ch",L"l,n",L"f,h",L"l,r",L"an,ang",L"en,eng",L"in,ing",L"ian,iang",L"uan,uang",L"q,j"};
+	int fuzzyNum = 12; //12;
+	vector<wstring> output; //æœ€ç»ˆç»“æœ
+	vector<float> similarity; //ç›¸ä¼¼åº¦
+	int num = 3; //è¾“å‡ºç»“æœçš„æ•°é‡
+	if(-1 == postProcess.adjustedByPinYin(src, fuzzyChar, fuzzyNum))
+	{
+		wcerr << "Adjusted By Pin Yin Failed"<<endl;
+		return -1;
+	}
+
+	// è¾“å‡ºæœ€ç»ˆç»“æœ
+	if(-1 ==postProcess.getFinalResult(output, similarity, num))
+	{
+		wcerr << "Get final result failed"<<endl;
+		return -1;
+	}
+
+	struct timeval end;
+	gettimeofday( &end, NULL );
+
+	timer = 1000000 * (end.tv_sec-start.tv_sec)+ end.tv_usec-start.tv_usec;
+	wcout << L"time cost totaly(ms): " << timer / 1000.0 << endl;
+
+	//wcout.imbue(locale("chs"));
+	for(int i=0; i<num; i++)
+	{
+		wcout << output[i] << endl;
+		wcout <<"similarity: "<<similarity[i]<<endl;
+	}
+
+	return 0;
+}
+#endif
+
+
+
